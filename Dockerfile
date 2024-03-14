@@ -1,0 +1,31 @@
+FROM ubuntu:22.04
+
+ARG ARM=no
+
+RUN apt update && apt install -y ocl-icd-libopencl1 curl jq unzip ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/go-spacemesh
+
+RUN VERSION=$(curl -s "https://api.github.com/repos/spacemeshos/go-spacemesh/releases/latest" | jq -r ".tag_name") \
+    && echo $VERSION > /version.txt \
+    && if [ "$ARM" = "yes" ]; then \
+        curl -o Linux.zip https://storage.googleapis.com/go-spacemesh-release-builds/$VERSION/go-spacemesh-$VERSION-linux-arm64.zip; \
+    else \
+        curl -o Linux.zip https://storage.googleapis.com/go-spacemesh-release-builds/$VERSION/go-spacemesh-$VERSION-linux-amd64.zip; \
+    fi \
+    && unzip Linux.zip \
+    &&  if [ "$ARM" = "yes" ]; then \
+        mv go-spacemesh-$VERSION-linux-arm64/* .; \
+    else \
+        mv go-spacemesh-$VERSION-linux-amd64/* .; \
+    fi \
+    && rm Linux.zip
+
+ADD https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grpcurl_1.8.7_linux_x86_64.tar.gz /bin/
+
+RUN tar -zxvf /bin/grpcurl_1.8.7_linux_x86_64.tar.gz -C /bin/ \
+    && rm /bin/grpcurl_1.8.7_linux_x86_64.tar.gz  \
+    && echo "#! /bin/bash \n grpcurl -plaintext -d '' 0.0.0.0:9093 spacemesh.v1.AdminService.EventsStream" >> check.sh \
+    && chmod +x check.sh 
+
+CMD ./service --address=http://$NODE_IP  --dir=./post-data --threads=$THREADS --nonces=$NONCES
