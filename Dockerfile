@@ -28,4 +28,6 @@ RUN tar -zxvf /bin/grpcurl_1.8.7_linux_x86_64.tar.gz -C /bin/ \
     && echo "#! /bin/bash \n grpcurl -plaintext -d '' 0.0.0.0:9093 spacemesh.v1.AdminService.EventsStream" >> check.sh \
     && chmod +x check.sh 
 
+COPY config.mainnet.json .
+
 CMD ./service --address=http://$NODE_IP  --dir=./post-data --threads=$THREADS --nonces=$NONCES
